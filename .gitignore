@@ -1,2 +1,7 @@
+<<<<<<< HEAD
 .vscode
 target
+=======
+Cargo.lock
+.vscode
+>>>>>>> main
