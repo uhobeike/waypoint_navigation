@@ -1,6 +1,0 @@
-[env]
-<<<<<<< HEAD
-IDL_PACKAGE_FILTER = { value = "" }
-=======
-IDL_PACKAGE_FILTER = { value = "std_msgs" }
->>>>>>> main
