@@ -7,10 +7,14 @@ use async_std::task;
 use futures::StreamExt;
 use std::sync::{Arc, Mutex};
 
-pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Result<(), r2r::Error> {
+pub async fn client(
+    arc_node: Arc<Mutex<r2r::Node>>,
+    waypoint: Waypoint,
+    action_server_name: &String,
+) -> Result<(), r2r::Error> {
     let (client, service_available) = {
         let mut node = arc_node.lock().unwrap();
-        let client = node.create_action_client::<NavigateToPose::Action>("navigate_to_pose")?;
+        let client = node.create_action_client::<NavigateToPose::Action>(action_server_name)?;
         let service_available = node.is_available(&client)?;
         (client, service_available)
     };
