@@ -7,7 +7,7 @@ use async_std::task;
 use futures::StreamExt;
 use std::sync::{Arc, Mutex};
 
-pub async fn client(
+pub async fn action_client(
     arc_node: Arc<Mutex<r2r::Node>>,
     waypoint: Waypoint,
     action_server_name: &String,
