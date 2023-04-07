@@ -1,9 +1,10 @@
+use colored::Colorize;
 use waypoint_navigation::Waypoint;
 
 use r2r::{nav2_msgs::action::NavigateToPose, ClockType::RosTime};
 
 use async_std::task;
-use futures::{executor::LocalPool, StreamExt};
+use futures::StreamExt;
 use std::sync::{Arc, Mutex};
 
 pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Result<(), r2r::Error> {
@@ -13,9 +14,9 @@ pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Resu
         let service_available = node.is_available(&client)?;
         (client, service_available)
     };
-    println!("waiting for service...");
+    println!("{}", "waiting for service...".yellow());
     service_available.await?;
-    println!("service available.");
+    println!("{}", "service available.".green());
 
     let goal_pose = set_goal(waypoint);
 
@@ -29,12 +30,20 @@ pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Resu
         let goal = goal.clone();
         async move {
             println!(
-                "new feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
+                "got feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
                 msg.distance_remaining,
                 goal.get_status()
             );
         }
     }));
+
+    match result.await {
+        Ok((status, _msg)) => {
+            println!("got action result {} ", status.to_string().green());
+            std::process::exit(0);
+        }
+        Err(e) => println!("action failed: {:?}", e.to_string().red()),
+    }
 
     Ok(())
 }
