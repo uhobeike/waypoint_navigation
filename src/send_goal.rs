@@ -2,6 +2,8 @@ use waypoint_navigation::Waypoint;
 
 use r2r::{nav2_msgs::action::NavigateToPose, ClockType::RosTime};
 
+use async_std::task;
+use futures::{executor::LocalPool, StreamExt};
 use std::sync::{Arc, Mutex};
 
 pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Result<(), r2r::Error> {
@@ -17,9 +19,22 @@ pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Resu
 
     let goal_pose = set_goal(waypoint);
 
-    if let Ok(_resp) = client.send_goal_request(goal_pose).unwrap().await {
-        println!("Send Goal Request is Ok.");
-    }
+    let (goal, result, feedback) = client
+        .send_goal_request(goal_pose)
+        .expect("")
+        .await
+        .expect("Goal Rejected");
+
+    task::spawn(feedback.for_each(move |msg| {
+        let goal = goal.clone();
+        async move {
+            println!(
+                "new feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
+                msg.distance_remaining,
+                goal.get_status()
+            );
+        }
+    }));
 
     Ok(())
 }
