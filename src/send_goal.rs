@@ -1,29 +1,49 @@
 use waypoint_navigation::Waypoint;
 
-use r2r::nav2_msgs::action::NavigateToPose;
+use r2r::{nav2_msgs::action::NavigateToPose, ClockType::RosTime};
 
 use std::sync::{Arc, Mutex};
+
 pub async fn client(arc_node: Arc<Mutex<r2r::Node>>, waypoint: Waypoint) -> Result<(), r2r::Error> {
-    let (client, mut timer, service_available) = {
+    let (client, service_available) = {
         let mut node = arc_node.lock().unwrap();
-        let client = node.create_client::<NavigateToPose::SendGoal::Service>("/add_two_ints")?;
-        let timer = node.create_wall_timer(std::time::Duration::from_secs(2))?;
+        let client = node.create_action_client::<NavigateToPose::Action>("navigate_to_pose")?;
         let service_available = node.is_available(&client)?;
-        (client, timer, service_available)
+        (client, service_available)
     };
     println!("waiting for service...");
     service_available.await?;
     println!("service available.");
-    let uuid = r2r::unique_identifier_msgs::msg::UUID::default();
-    let goal_pose = NavigateToPose::Goal::default();
-    let req = NavigateToPose::SendGoal::Request {
-        goal_id: uuid,
-        goal: goal_pose,
-    };
-    if let Ok(_resp) = client.request(&req).unwrap().await {
-        println!("Debug");
+
+    let goal_pose = set_goal(waypoint);
+
+    if let Ok(_resp) = client.send_goal_request(goal_pose).unwrap().await {
+        println!("Send Goal Request is Ok.");
     }
 
-    timer.tick().await?;
     Ok(())
+}
+
+fn set_goal(waypoint: Waypoint) -> NavigateToPose::Goal {
+    let mut goal_pose = NavigateToPose::Goal::default();
+
+    r2r::Clock::create(r2r::ClockType::SystemTime).unwrap();
+    let clock = r2r::Clock::create(RosTime);
+    let now = clock.unwrap().get_now();
+
+    let mut header = r2r::std_msgs::msg::Header::default();
+    header.frame_id = "map".to_string();
+    header.stamp = r2r::Clock::to_builtin_time(&now.unwrap());
+
+    let mut pose = r2r::geometry_msgs::msg::Pose::default();
+
+    pose.position.x = waypoint.get_x();
+    pose.position.y = waypoint.get_y();
+    pose.orientation.w = waypoint.get_quaternion_w();
+    pose.orientation.z = waypoint.get_quaternion_z();
+
+    goal_pose.pose.header = header;
+    goal_pose.pose.pose = pose;
+
+    goal_pose
 }
