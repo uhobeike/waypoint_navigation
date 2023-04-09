@@ -3,6 +3,9 @@ name = "waypoint_navigation"
 version = "0.0.0"
 edition = "2021"
 
+[package.metadata.ros]
+install_to_share = ["config"]
+
 [profile.colcon]
 inherits = "release"
 
