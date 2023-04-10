@@ -20,14 +20,12 @@ impl YamlParser {
     pub fn get_waypoint(&self) -> Vec<Waypoint> {
         let yaml = self.yaml[0].clone();
 
-        // get_waypoint_debug(yaml["waypoints"].clone());
-
+        let mut vec_waypoint = Vec::new();
         for yaml in yaml["waypoints"].clone() {
-            set_waypoint(yaml);
+            vec_waypoint.push(set_waypoint(yaml));
         }
 
-        let waypoint = Vec::new();
-        waypoint
+        vec_waypoint
     }
 }
 
@@ -40,12 +38,12 @@ fn set_waypoint(yaml: yaml_rust::Yaml) -> Waypoint {
 
     waypoint.set_x(yaml["position"]["x"].as_f64().unwrap());
     waypoint.set_y(yaml["position"]["y"].as_f64().unwrap());
-    waypoint.set_yaw(yaml["position"]["yaw"].as_f64().unwrap());
+    waypoint.set_yaw(yaml["euler_angle"]["z"].as_f64().unwrap());
 
     waypoint
 }
 
-fn get_waypoint_debug(yaml: yaml_rust::Yaml) {
+fn _get_waypoint_debug(yaml: yaml_rust::Yaml) {
     println!("{}", "Read Yaml Start");
     for waypoint in yaml {
         println!("{}", waypoint["id"].as_i64().unwrap());
