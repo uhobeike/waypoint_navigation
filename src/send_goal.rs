@@ -6,9 +6,11 @@ use r2r::{nav2_msgs::action::NavigateToPose, ClockType::RosTime};
 use async_std::task;
 use futures::StreamExt;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 pub async fn action_client(
     arc_node: Arc<Mutex<r2r::Node>>,
+    way_nav_flag: Arc<Mutex<bool>>,
     waypoint: Waypoint,
     action_server_name: &String,
 ) -> Result<(), r2r::Error> {
@@ -22,34 +24,40 @@ pub async fn action_client(
     service_available.await?;
     println!("{}", "service available.".green());
 
-    let goal_pose = set_goal(waypoint);
+    let mut goal_distance = f32::default();
+    loop {
+        {
+            let way_nav_flag = *way_nav_flag.clone().lock().unwrap();
 
-    let (goal, result, feedback) = client
-        .send_goal_request(goal_pose)
-        .expect("")
-        .await
-        .expect("Goal Rejected");
+            if way_nav_flag {
+                let goal_pose = set_goal(waypoint);
 
-    task::spawn(feedback.for_each(move |msg| {
-        let goal = goal.clone();
-        async move {
-            println!(
-                "got feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
-                msg.distance_remaining,
-                goal.get_status()
-            );
+                let (goal, result, feedback) = client
+                    .send_goal_request(goal_pose)
+                    .expect("")
+                    .await
+                    .expect("Goal Rejected");
+
+                task::spawn(async move {
+                    feedback
+                        .for_each(move |msg| {
+                            let goal = goal.clone();
+                            async move {
+                                goal_distance = msg.distance_remaining.clone();
+                                println!(
+                                    "got feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
+                                    msg.distance_remaining,
+                                    goal.get_status()
+                                );
+                            }
+                        })
+                        .await
+                });
+            }
+            println!("fsdfsdkjfsdaj {}", goal_distance);
         }
-    }));
-
-    match result.await {
-        Ok((status, _msg)) => {
-            println!("got action result {} ", status.to_string().green());
-            std::process::exit(0);
-        }
-        Err(e) => println!("action failed: {:?}", e.to_string().red()),
+        tokio::time::sleep(Duration::from_millis(500)).await;
     }
-
-    Ok(())
 }
 
 fn set_goal(waypoint: Waypoint) -> NavigateToPose::Goal {

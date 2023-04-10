@@ -5,6 +5,14 @@ pub struct Waypoint {
     pub yaw: f64,
 }
 
+impl Copy for Waypoint {}
+
+impl Clone for Waypoint {
+    fn clone(&self) -> Waypoint {
+        *self
+    }
+}
+
 impl Waypoint {
     pub fn set_x(&mut self, x: f64) {
         self.x = x;

@@ -1,4 +1,5 @@
 pub mod send_goal;
+pub mod waypoint_server;
 use waypoint_navigation::Waypoint;
 
 use colored::*;
@@ -8,6 +9,7 @@ use tokio::task;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let action_server_name = "navigate_to_pose";
+    let waypoint_navigation_flag = Arc::new(Mutex::new(false));
 
     let goal = Waypoint {
         x: 1.0,
@@ -30,8 +32,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arc_node = Arc::new(Mutex::new(node));
 
     let an = arc_node.clone();
+    let way_nav_flag = waypoint_navigation_flag.clone();
     task::spawn(async move {
-        send_goal::action_client(an, goal, &action_server_name.to_string())
+        waypoint_server::service_server(an, way_nav_flag)
+            .await
+            .unwrap()
+    });
+
+    let an = arc_node.clone();
+    let way_nav_flag = waypoint_navigation_flag.clone();
+    task::spawn(async move {
+        send_goal::action_client(an, way_nav_flag, goal, &action_server_name.to_string())
             .await
             .unwrap()
     });
