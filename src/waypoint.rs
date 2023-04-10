@@ -6,6 +6,18 @@ pub struct Waypoint {
 }
 
 impl Waypoint {
+    pub fn set_x(&mut self, x: f64) {
+        self.x = x;
+    }
+
+    pub fn set_y(&mut self, y: f64) {
+        self.y = y;
+    }
+
+    pub fn set_yaw(&mut self, yaw: f64) {
+        self.yaw = yaw;
+    }
+
     pub fn get_x(&self) -> f64 {
         self.x
     }
