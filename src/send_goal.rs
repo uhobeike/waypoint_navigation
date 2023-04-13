@@ -11,7 +11,7 @@ use std::time::Duration;
 pub async fn action_client(
     arc_node: Arc<Mutex<r2r::Node>>,
     way_nav_flag: Arc<Mutex<bool>>,
-    waypoint: Waypoint,
+    waypoint: Vec<Waypoint>,
     action_server_name: &String,
 ) -> Result<(), r2r::Error> {
     let (client, service_available) = {
@@ -24,26 +24,40 @@ pub async fn action_client(
     service_available.await?;
     println!("{}", "service available.".green());
 
-    let mut goal_distance = f32::default();
+    let goal_distance = f32::default();
+    let arc_goal_distance = Arc::new(Mutex::new(goal_distance));
+    let feeedback_lock_flag = true;
+    let arc_feeedback_lock_flag = Arc::new(Mutex::new(feeedback_lock_flag));
+
+    let mut waypoint_indx = usize::default();
+
     loop {
         {
             let way_nav_flag = *way_nav_flag.clone().lock().unwrap();
+            let agd = Arc::clone(&arc_goal_distance);
+            let aflf = Arc::clone(&arc_feeedback_lock_flag);
 
-            if way_nav_flag {
-                let goal_pose = set_goal(waypoint);
+            if way_nav_flag && *aflf.lock().unwrap() && *agd.lock().unwrap() < 0.5 {
+                println!("{:?}", waypoint.iter());
+                let goal_pose = set_goal(waypoint[waypoint_indx]);
+                waypoint_indx += 1;
+                *aflf.lock().unwrap() = false;
 
-                let (goal, result, feedback) = client
+                let (goal, _result, feedback) = client
                     .send_goal_request(goal_pose)
                     .expect("")
                     .await
                     .expect("Goal Rejected");
 
-                task::spawn(async move {
+                let task = task::spawn(async move {
                     feedback
                         .for_each(move |msg| {
+                            let mut feeedback_lock_flag = aflf.lock().unwrap();
                             let goal = goal.clone();
+                            let mut goal_distance = agd.lock().unwrap();
+                            *feeedback_lock_flag = true;
+                            *goal_distance = msg.distance_remaining.clone();
                             async move {
-                                goal_distance = msg.distance_remaining.clone();
                                 println!(
                                     "got feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
                                     msg.distance_remaining,
@@ -53,8 +67,12 @@ pub async fn action_client(
                         })
                         .await
                 });
+
+                let agd = Arc::clone(&arc_goal_distance);
+                if *agd.lock().unwrap() < 0.5 {
+                    task.cancel().await;
+                }
             }
-            println!("fsdfsdkjfsdaj {}", goal_distance);
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
