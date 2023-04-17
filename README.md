@@ -1,7 +1,7 @@
 # waypoint_navigation [![build-test](https://github.com/uhobeike/waypoint_navigation/actions/workflows/build-test.yaml/badge.svg)](https://github.com/uhobeike/waypoint_navigation/actions/workflows/build-test.yaml)
 
 <div align="center">
-<img src="" width="1000">
+<img src="https://user-images.githubusercontent.com/40545422/232461927-6e097b12-8f94-4b4f-b223-e42bb92b7153.gif" width="1000">
 </div>
 
 ## Overview
