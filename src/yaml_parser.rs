@@ -1,8 +1,7 @@
 use waypoint_navigation::Waypoint;
 extern crate yaml_rust;
 use std::fs;
-use std::{collections::HashMap, hash::Hash};
-use yaml_rust::{yaml, YamlEmitter, YamlLoader};
+use yaml_rust::YamlLoader;
 
 pub struct YamlParser {
     pub yaml_path: String,
