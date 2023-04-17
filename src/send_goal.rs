@@ -11,7 +11,7 @@ use std::time::Duration;
 pub async fn action_client(
     arc_node: Arc<Mutex<r2r::Node>>,
     way_nav_flag: Arc<Mutex<bool>>,
-    waypoint: Waypoint,
+    waypoint: Vec<Waypoint>,
     action_server_name: &String,
 ) -> Result<(), r2r::Error> {
     let (client, service_available) = {
@@ -24,15 +24,28 @@ pub async fn action_client(
     service_available.await?;
     println!("{}", "service available.".green());
 
-    let mut goal_distance = f32::default();
+    let goal_distance = f32::default();
+    let arc_goal_distance = Arc::new(Mutex::new(goal_distance));
+    let feeedback_lock_flag = true;
+    let arc_feeedback_lock_flag = Arc::new(Mutex::new(feeedback_lock_flag));
+    let arc_waypoint = Arc::new(Mutex::new(waypoint));
+    let arc_waypoint_indx = Arc::new(Mutex::new(usize::default()));
+
     loop {
         {
             let way_nav_flag = *way_nav_flag.clone().lock().unwrap();
+            let agd = Arc::clone(&arc_goal_distance);
+            let aflf = Arc::clone(&arc_feeedback_lock_flag);
+            let awt = Arc::clone(&arc_waypoint);
+            let awi = Arc::clone(&arc_waypoint_indx);
 
-            if way_nav_flag {
-                let goal_pose = set_goal(waypoint);
+            if way_nav_flag && *aflf.lock().unwrap() && *agd.lock().unwrap() < 0.5 {
+                println!("{:?}", awt.lock().unwrap().iter());
+                let goal_pose = set_goal(awt.lock().unwrap()[*awi.lock().unwrap()]);
+                *awi.lock().unwrap() += 1;
+                *aflf.lock().unwrap() = false;
 
-                let (goal, result, feedback) = client
+                let (goal, _result, feedback) = client
                     .send_goal_request(goal_pose)
                     .expect("")
                     .await
@@ -41,9 +54,22 @@ pub async fn action_client(
                 task::spawn(async move {
                     feedback
                         .for_each(move |msg| {
+                            let mut feeedback_lock_flag = aflf.lock().unwrap();
                             let goal = goal.clone();
+                            let mut goal_distance = agd.lock().unwrap();
+                            let waypoint = awt.lock().unwrap();
+                            let waypoint_index = *awi.lock().unwrap();
+
+                            *feeedback_lock_flag = true;
+                            *goal_distance = ((waypoint[waypoint_index - 1].get_x()
+                                - msg.current_pose.pose.position.x)
+                                .powf(2.0)
+                                + (waypoint[waypoint_index - 1].get_y()
+                                    - msg.current_pose.pose.position.y)
+                                    .powf(2.0))
+                            .sqrt() as f32;
+
                             async move {
-                                goal_distance = msg.distance_remaining.clone();
                                 println!(
                                     "got feedback msg [ Distance Remaining: {:.3} -- {:?} ]",
                                     msg.distance_remaining,
@@ -54,7 +80,6 @@ pub async fn action_client(
                         .await
                 });
             }
-            println!("fsdfsdkjfsdaj {}", goal_distance);
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
