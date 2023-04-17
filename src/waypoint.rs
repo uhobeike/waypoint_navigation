@@ -1,16 +1,8 @@
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Waypoint {
     pub x: f64,
     pub y: f64,
     pub yaw: f64,
-}
-
-impl Copy for Waypoint {}
-
-impl Clone for Waypoint {
-    fn clone(&self) -> Waypoint {
-        *self
-    }
 }
 
 impl Waypoint {
