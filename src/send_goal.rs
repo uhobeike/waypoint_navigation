@@ -40,7 +40,11 @@ pub async fn action_client(
             let awi = Arc::clone(&arc_waypoint_indx);
 
             if way_nav_flag && *aflf.lock().unwrap() && *agd.lock().unwrap() < 0.5 {
-                println!("{:?}", awt.lock().unwrap().iter());
+                if awt.lock().unwrap().len() <= *awi.lock().unwrap() {
+                    println!("{}", "finish waypoint navigation".green());
+                    std::process::exit(0);
+                }
+
                 let goal_pose = set_goal(awt.lock().unwrap()[*awi.lock().unwrap()]);
                 *awi.lock().unwrap() += 1;
                 *aflf.lock().unwrap() = false;
@@ -51,7 +55,7 @@ pub async fn action_client(
                     .await
                     .expect("Goal Rejected");
 
-                let task = task::spawn(async move {
+                task::spawn(async move {
                     feedback
                         .for_each(move |msg| {
                             let mut feeedback_lock_flag = aflf.lock().unwrap();
@@ -79,11 +83,6 @@ pub async fn action_client(
                         })
                         .await
                 });
-
-                let agd = Arc::clone(&arc_goal_distance);
-                if *agd.lock().unwrap() < 0.5 {
-                    task.cancel().await;
-                }
             }
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
