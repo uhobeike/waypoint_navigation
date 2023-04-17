@@ -28,19 +28,21 @@ pub async fn action_client(
     let arc_goal_distance = Arc::new(Mutex::new(goal_distance));
     let feeedback_lock_flag = true;
     let arc_feeedback_lock_flag = Arc::new(Mutex::new(feeedback_lock_flag));
-
-    let mut waypoint_indx = usize::default();
+    let arc_waypoint = Arc::new(Mutex::new(waypoint));
+    let arc_waypoint_indx = Arc::new(Mutex::new(usize::default()));
 
     loop {
         {
             let way_nav_flag = *way_nav_flag.clone().lock().unwrap();
             let agd = Arc::clone(&arc_goal_distance);
             let aflf = Arc::clone(&arc_feeedback_lock_flag);
+            let awt = Arc::clone(&arc_waypoint);
+            let awi = Arc::clone(&arc_waypoint_indx);
 
             if way_nav_flag && *aflf.lock().unwrap() && *agd.lock().unwrap() < 0.5 {
-                println!("{:?}", waypoint.iter());
-                let goal_pose = set_goal(waypoint[waypoint_indx]);
-                waypoint_indx += 1;
+                println!("{:?}", awt.lock().unwrap().iter());
+                let goal_pose = set_goal(awt.lock().unwrap()[*awi.lock().unwrap()]);
+                *awi.lock().unwrap() += 1;
                 *aflf.lock().unwrap() = false;
 
                 let (goal, _result, feedback) = client
@@ -55,8 +57,18 @@ pub async fn action_client(
                             let mut feeedback_lock_flag = aflf.lock().unwrap();
                             let goal = goal.clone();
                             let mut goal_distance = agd.lock().unwrap();
+                            let waypoint = awt.lock().unwrap();
+                            let waypoint_index = *awi.lock().unwrap();
+
                             *feeedback_lock_flag = true;
-                            *goal_distance = msg.distance_remaining.clone();
+                            *goal_distance = ((waypoint[waypoint_index - 1].get_x()
+                                - msg.current_pose.pose.position.x)
+                                .powf(2.0)
+                                + (waypoint[waypoint_index - 1].get_y()
+                                    - msg.current_pose.pose.position.y)
+                                    .powf(2.0))
+                            .sqrt() as f32;
+
                             async move {
                                 println!(
                                     "got feedback msg [ Distance Remaining: {:.3} -- {:?} ]",

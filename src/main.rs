@@ -1,9 +1,7 @@
 pub mod send_goal;
 pub mod waypoint_server;
 pub mod yaml_parser;
-use waypoint_navigation::Waypoint;
 
-use colored::*;
 use std::sync::{Arc, Mutex};
 use tokio::task;
 
