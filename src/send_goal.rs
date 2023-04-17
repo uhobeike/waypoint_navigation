@@ -51,7 +51,7 @@ pub async fn action_client(
                     .await
                     .expect("Goal Rejected");
 
-                task::spawn(async move {
+                let task = task::spawn(async move {
                     feedback
                         .for_each(move |msg| {
                             let mut feeedback_lock_flag = aflf.lock().unwrap();
@@ -79,6 +79,11 @@ pub async fn action_client(
                         })
                         .await
                 });
+
+                let agd = Arc::clone(&arc_goal_distance);
+                if *agd.lock().unwrap() < 0.5 {
+                    task.cancel().await;
+                }
             }
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
