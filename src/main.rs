@@ -2,16 +2,18 @@ pub mod send_goal;
 pub mod waypoint_server;
 pub mod yaml_parser;
 
+use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::task;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
     let action_server_name = "navigate_to_pose";
     let waypoint_navigation_flag = Arc::new(Mutex::new(false));
 
     let mut yaml = yaml_parser::YamlParser {
-        yaml_path: "/home/ikebe/ros2/rust/waypoint_navigation_ws/src/waypoint_navigation/config/waypoint.yaml".to_string(),
+        yaml_path: args[1].to_string(),
         yaml: Vec::new(),
     };
 
