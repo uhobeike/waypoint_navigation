@@ -46,4 +46,28 @@ colcon  build --symlink-install
 ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
 ros2 launch turtlebot3_navigation2 navigation2.launch.py use_sim_time:=True
 ros2 launch waypoint_navigation waypoint_navigation.launch.py
+ros2 service call /waypoint_navigation std_srvs/srv/Trigger {}
+```
+
+## [Waypoint Example](config/waypoint.yaml)
+```
+waypoints:
+  - id: 1
+    position:
+      x: 1.0
+      y: -0.5
+    euler_angle:
+      z: 0.1
+  - id: 2
+    position:
+      x: 0.541
+      y: 0.555
+    euler_angle:
+      z: -0.333
+  - id: 3
+    position:
+      x: -1.958
+      y: -0.471
+    euler_angle:
+      z: 0.020
 ```
